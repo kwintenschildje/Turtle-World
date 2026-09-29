@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turtle World</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(#62c9ff, #d9f7ff);
+  overflow: hidden;
+  text-align: center;
+}
+
+.screen {
+  display: none;
+  min-height: 100vh;
+  padding: 30px 15px;
+}
+
+.screen.active {
+  display: block;
+}
+
+h1 {
+  font-size: 60px;
+  margin: 25px 0 10px;
+  color: #167a35;
+  text-shadow: 3px 3px white;
+}
+
+h2 {
+  font-size: 30px;
+}
+
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 25px;
+  margin: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #38b000;
+  color: white;
+  box-shadow: 0 5px 0 #247500;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #247500;
+}
+
+.menu-button {
+  display: block;
+  width: 280px;
+  margin: 18px auto;
+}
+
+#levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 8px;
+  max-width: 900px;
+  margin: 20px auto;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.levelButton {
+  padding: 12px 5px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.locked {
+  background: #777;
+  box-shadow: 0 4px 0 #444;
+  cursor: not-allowed;
+}
+
+#game {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  height: 650px;
+  margin: auto;
+  background: linear-gradient(#63cfff 0%, #b9f0ff 65%, #75c850 65%);
+  border: 5px solid #247500;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 2px 2px #333;
+}
+
+#player {
+  position: absolute;
+  width: 48px;
+  height: 42px;
+  background: #29a329;
+  border-radius: 50% 50% 45% 45%;
+  z-index: 10;
+  border: 3px solid #176b17;
+}
+
+#player::before {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  right: -15px;
+  top: 8px;
+  background: #78d64b;
+  border-radius: 50%;
+  border: 2px solid #176b17;
+}
+
+#player::after {
+  content: "🐢";
+  position: absolute;
+  font-size: 35px;
+  left: 2px;
+  top: -4px;
+}
+
+.platform {
+  position: absolute;
+  height: 25px;
+  background: #8b5a2b;
+  border: 4px solid #633b19;
+  border-radius: 8px;
+  z-index: 5;
+}
+
+.coin {
+  position: absolute;
+  width: 27px;
+  height: 27px;
+  background: gold;
+  border: 3px solid #d49b00;
+  border-radius: 50%;
+  z-index: 7;
+  font-size: 17px;
+}
+
+.coin::after {
+  content: "★";
+}
+
+.enemy {
+  position: absolute;
+  width: 42px;
+  height: 35px;
+  background: #d62828;
+  border-radius: 45% 45% 20% 20%;
+  border: 3px solid #8b1111;
+  z-index: 8;
+}
+
+.enemy::after {
+  content: "👾";
+  position: absolute;
+  font-size: 30px;
+  top: -4px;
+  left: 3px;
+}
+
+#finish {
+  position: absolute;
+  width: 15px;
+  height: 170px;
+  background: #222;
+  z-index: 6;
+}
+
+#flag {
+  position: absolute;
+  font-size: 45px;
+  left: 5px;
+  top: -35px;
+}
+
+#message {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: white;
+}
+
+#message h2 {
+  font-size: 45px;
+}
+
+#message button {
+  margin: 10px;
+}
+
+.controls {
+  margin-top: 15px;
+  color: #123;
+  font-weight: bold;
+}
+
+.small {
+  font-size: 16px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HOOFDMENU -->
+<div id="menu" class="screen active">
+  <h1>🐢 Turtle World</h1>
+  <h2>Het grote schildpad-avontuur!</h2>
+
+  <button class="menu-button" onclick="showLevels()">
+    🎮 Spelen
+  </button>
+
+  <button class="menu-button" onclick="showInstructions()">
+    📖 Uitleg
+  </button>
+
+  <p>Levels: <b>1 t/m 999</b></p>
+  <p id="progressText"></p>
+</div>
+
+<!-- LEVELKEUZE -->
+<div id="levelScreen" class="screen">
+  <h1>🐢 Levels</h1>
+  <p id="levelInfo"></p>
+
+  <div id="levels"></div>
+
+  <button onclick="showMenu()">🏠 Hoofdmenu</button>
+</div>
+
+<!-- UITLEG -->
+<div id="instructions" class="screen">
+  <h1>📖 Uitleg</h1>
+
+  <h2>Besturing</h2>
+
+  <p>⬅️ Pijltje links = naar links</p>
+  <p>➡️ Pijltje rechts = naar rechts</p>
+  <p>⬆️ Pijltje omhoog = springen</p>
+  <p>A / D = bewegen</p>
+  <p>W = springen</p>
+
+  <h2>🎯 Doel</h2>
+  <p>Verzamel munten, ontwijk vijanden en bereik de vlag!</p>
+
+  <button onclick="showMenu()">🏠 Terug</button>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="screen">
+
+  <div id="game">
+
+    <div id="hud">
+      <span id="levelDisplay">Level 1</span>
+      <span id="coinDisplay">⭐ 0</span>
+      <span id="livesDisplay">❤️❤️❤️</span>
+    </div>
+
+    <div id="player"></div>
+
+    <div id="finish">
+      <div id="flag">🚩</div>
+    </div>
+
+    <div id="message">
+      <h2 id="messageTitle">Level gehaald!</h2>
+      <p id="messageText"></p>
+
+      <div>
+        <button onclick="nextLevel()">➡️ Volgend level</button>
+        <button onclick="restartLevel()">🔄 Opnieuw</button>
+        <button onclick="showLevels()">📚 Levels</button>
+        <button onclick="showMenu()">🏠 Hoofdmenu</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    ⬅️ ➡️ bewegen &nbsp;&nbsp; ⬆️ springen
+  </div>
+</div>
+
+<script>
+let unlockedLevel = Number(localStorage.getItem("turtleUnlocked")) || 1;
+
+if (unlockedLevel < 1) unlockedLevel = 1;
+if (unlockedLevel > 999) unlockedLevel = 999;
+
+let currentLevel = 1;
+let playerX = 60;
+let playerY = 500;
+let velocityX = 0;
+let velocityY = 0;
+let onGround = false;
+let coins = 0;
+let lives = 3;
+let keys = {};
+let gameRunning = false;
+
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const finish = document.getElementById("finish");
+const message = document.getElementById("message");
+
+let platforms = [];
+let coinObjects = [];
+let enemyObjects = [];
+
+document.addEventListener("keydown", function(e) {
+  keys[e.key.toLowerCase()] = true;
+
+  if (
+    e.key === "ArrowLeft" ||
+    e.key === "ArrowRight" ||
+    e.key === "ArrowUp" ||
+    e.key === " "
+  ) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("keyup", function(e) {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("active");
+  });
+
+  document.getElementById(id).classList.add("active");
+}
+
+function showMenu() {
+  gameRunning = false;
+  showScreen("menu");
+  updateProgress();
+}
+
+function showInstructions() {
+  showScreen("instructions");
+}
+
+function updateProgress() {
+  document.getElementById("progressText").textContent =
+    "Je hebt level " + unlockedLevel + " vrijgespeeld!";
+}
+
+function showLevels() {
+  gameRunning = false;
+  showScreen("levelScreen");
+
+  const container = document.getElementById("levels");
+  container.innerHTML = "";
+
+  document.getElementById("levelInfo").textContent =
+    "Je kunt tot en met level " + unlockedLevel + " spelen.";
+
+  for (let i = 1; i <= 999; i++) {
+    const button = document.createElement("button");
+
+    button.className = "levelButton";
+
+    if (i <= unlockedLevel) {
+      button.textContent = "Level " + i;
+      button.onclick = function() {
+        startLevel(i);
+      };
+    } else {
+      button.textContent = "🔒 " + i;
+      button.classList.add("locked");
+      button.disabled = true;
+    }
+
+    container.appendChild(button);
+  }
+}
+
+function startLevel(level) {
+  if (level > unlockedLevel) return;
+
+  currentLevel = level;
+  coins = 0;
+  lives = 3;
+  gameRunning = true;
+
+  showScreen("gameScreen");
+  createLevel(level);
+}
+
+function clearObjects() {
+  platforms.forEach(p => p.element.remove());
+  coinObjects.forEach(c => c.element.remove());
+  enemyObjects.forEach(e => e.element.remove());
+
+  platforms = [];
+  coinObjects = [];
+  enemyObjects = [];
+}
+
+function createPlatform(x, y, width) {
+  const element = document.createElement("div");
+  element.className = "platform";
+  element.style.left = x + "px";
+  element.style.top = y + "px";
+  element.style.width = width + "px";
+
+  game.appendChild(element);
+
+  const p = {
+    x: x,
+    y: y,
+    width: width,
+    height: 25,
+    element: element
+  };
+
+  platforms.push(p);
+}
+
+function createCoin(x, y) {
+  const element = document.createElement("div");
+  element.className = "coin";
+  element.style.left = x + "px";
+  element.style.top = y + "px";
+
+  game.appendChild(element);
+
+  coinObjects.push({
+    x: x,
+    y: y,
+    width: 27,
+    height: 27,
+    element: element,
+    collected: false
+  });
+}
+
+function createEnemy(x, y, distance) {
+  const element = document.createElement("div");
+  element.className = "enemy";
+  element.style.left = x + "px";
+  element.style.top = y + "px";
+
+  game.appendChild(element);
+
+  enemyObjects.push({
+    x: x,
+    y: y,
+    width: 42,
+    height: 35,
+    startX: x,
+    distance: distance,
+    direction: 1,
+    element: element
+  });
+}
+
+function createLevel(level) {
+  clearObjects();
+
+  message.style.display = "none";
+
+  playerX = 60;
+  playerY = 500;
+  velocityX = 0;
+  velocityY = 0;
+
+  document.getElementById("levelDisplay").textContent =
+    "Level " + level;
+
+  updateHUD();
+
+  // Grond
+  createPlatform(0, 600, 1100);
+
+  // Het level verandert automatisch naarmate je verder komt.
+  const difficulty = Math.min(level, 100);
+
+  // Platforms
+  createPlatform(150, 510, 150);
+  createPlatform(360, 430, 150);
+  createPlatform(570, 520, 130);
+  createPlatform(750, 420, 150);
+  createPlatform(930, 500, 130);
+
+  if (level >= 5) {
+    createPlatform(270, 320, 130);
+  }
+
+  if (level >= 10) {
+    createPlatform(500, 250, 130);
+  }
+
+  if (level >= 20) {
+    createPlatform(720, 300, 120);
+  }
+
+  if (level >= 50) {
+    createPlatform(860, 220, 120);
+  }
+
+  // Munten
+  createCoin(190, 465);
+  createCoin(400, 385);
+  createCoin(610, 475);
+  createCoin(790, 375);
+  createCoin(970, 455);
+
+  if (level >= 5) createCoin(310, 275);
+  if (level >= 10) createCoin(540, 205);
+  if (level >= 20) createCoin(760, 255);
+  if (level >= 50) createCoin(900, 175);
+
+  // Vijanden
+  if (level >= 2) createEnemy(300, 565, 100);
+  if (level >= 4) createEnemy(520, 565, 130);
+  if (level >= 7) createEnemy(700, 565, 150);
+  if (level >= 15) createEnemy(850, 565, 180);
+  if (level >= 30) createEnemy(430, 395, 80);
+  if (level >= 60) createEnemy(730, 265, 70);
+
+  // Eindvlag
+  finish.style.left = "1030px";
+  finish.style.top = "430px";
+
+  player.style.left = playerX + "px";
+  player.style.top = playerY + "px";
+
+  requestAnimationFrame(gameLoop);
+}
+
+function updateHUD() {
+  document.getElementById("coinDisplay").textContent =
+    "⭐ " + coins;
+
+  document.getElementById("livesDisplay").textContent =
+    "❤️".repeat(lives) + "🖤".repeat(3 - lives);
+}
+
+function collision(a, b) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+function gameLoop() {
+  if (!gameRunning) return;
+
+  // Beweging
+  if (keys["arrowleft"] || keys["a"]) {
+    velocityX = -5;
+  } else if (keys["arrowright"] || keys["d"]) {
+    velocityX = 5;
+  } else {
+    velocityX *= 0.8;
+  }
+
+  // Springen
+  if (
+    (keys["arrowup"] || keys["w"] || keys[" "]) &&
+    onGround
+  ) {
+    velocityY = -12;
+    onGround = false;
+  }
+
+  velocityY += 0.55;
+
+  playerX += velocityX;
+  playerY += velocityY;
+
+  if (playerX < 0) playerX = 0;
+  if (playerX > 1050) playerX = 1050;
+
+  onGround = false;
+
+  const playerBox = {
+    x: playerX,
+    y: playerY,
+    width: 48,
+    height: 42
+  };
+
+  // Platform collision
+  platforms.forEach(p => {
+    const falling =
+      velocityY >= 0 &&
+      playerY + 42 <= p.y + 10 &&
+      playerY + 42 + velocityY >= p.y;
+
+    const horizontal =
+      playerX + 48 > p.x &&
+      playerX < p.x + p.width;
+
+    if (falling && horizontal) {
+      playerY = p.y - 42;
+      velocityY = 0;
+      onGround = true;
+    }
+  });
+
+  // Munten
+  coinObjects.forEach(c => {
+    if (!c.collected && collision(playerBox, c)) {
+      c.collected = true;
+      c.element.style.display = "none";
+      coins++;
+      updateHUD();
+    }
+  });
+
+  // Vijanden
+  enemyObjects.forEach(e => {
+    e.x += e.direction * 1.5;
+
+    if (
+      e.x > e.startX + e.distance ||
+      e.x < e.startX - e.distance
+    ) {
+      e.direction *= -1;
+    }
+
+    e.element.style.left = e.x + "px";
+
+    const enemyBox = {
+      x: e.x,
+      y: e.y,
+      width: e.width,
+      height: e.height
+    };
+
+    if (collision(playerBox, enemyBox)) {
+      loseLife();
+    }
+  });
+
+  // Vallen
+  if (playerY > 680) {
+    loseLife();
+  }
+
+  // Finish
+  const finishBox = {
+    x: 1030,
+    y: 430,
+    width: 30,
+    height: 170
+  };
+
+  if (collision(playerBox, finishBox)) {
+    finishLevel();
+  }
+
+  player.style.left = playerX + "px";
+  player.style.top = playerY + "px";
+
+  requestAnimationFrame(gameLoop);
+}
+
+function loseLife() {
+  lives--;
+  updateHUD();
+
+  if (lives <= 0) {
+    gameRunning = false;
+
+    document.getElementById("messageTitle").textContent =
+      "😵 Game Over!";
+
+    document.getElementById("messageText").textContent =
+      "Je hebt level " + currentLevel + " niet gehaald.";
+
+    message.style.display = "flex";
+  } else {
+    playerX = 60;
+    playerY = 500;
+    velocityY = 0;
+  }
+}
+
+function finishLevel() {
+  if (!gameRunning) return;
+
+  gameRunning = false;
+
+  // Volgende level vrijspelen
+  if (currentLevel < 999) {
+    if (unlockedLevel < currentLevel + 1) {
+      unlockedLevel = currentLevel + 1;
+      localStorage.setItem(
+        "turtleUnlocked",
+        unlockedLevel
+      );
+    }
+
+    document.getElementById("messageTitle").textContent =
+      "🎉 Level " + currentLevel + " gehaald!";
+
+    document.getElementById("messageText").textContent =
+      "Je hebt " + coins + " munten verzameld. " +
+      "Level " + (currentLevel + 1) + " is vrijgespeeld!";
+  } else {
+    document.getElementById("messageTitle").textContent =
+      "🏆 TURTLE WORLD VOLTOOID!";
+
+    document.getElementById("messageText").textContent =
+      "Geweldig! Je hebt alle 999 levels gehaald!";
+  }
+
+  message.style.display = "flex";
+}
+
+function nextLevel() {
+  if (currentLevel >= 999) {
+    showLevels();
+    return;
+  }
+
+  startLevel(currentLevel + 1);
+}
+
+function restartLevel() {
+  startLevel(currentLevel);
+}
+
+updateProgress();
+</script>
+
+</body>
+</html>
